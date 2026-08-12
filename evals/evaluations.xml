@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<evaluation>
+  <qa_pair>
+    <question>How many length units does list_units report when filtered to the length dimension?</question>
+    <answer>9</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Convert 1 mile to kilometers using convert_length. What is the resulting value rounded to 3 decimal places?</question>
+    <answer>1.609</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Convert 32 fahrenheit to celsius using convert_temperature. What is the resulting value?</question>
+    <answer>0</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Convert 1000 grams to kilograms using convert_mass. What is the resulting value?</question>
+    <answer>1</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Convert 1 us_gallon to liters using convert_volume. What is the resulting value rounded to 2 decimal places?</question>
+    <answer>3.79</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Using compare_quantities, is 1 mile greater, less, or equal compared to 1 kilometer?</question>
+    <answer>greater</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What error does convert_temperature return when converting -300 celsius to kelvin?</question>
+    <answer>below absolute zero</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Call list_units with no dimension filter. How many total units does it report in the count field?</question>
+    <answer>27</answer>
+  </qa_pair>
+</evaluation>

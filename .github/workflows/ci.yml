@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      transport:
+        description: "MCP transport"
+        required: false
+        default: "stdio"
+      mcp-command:
+        description: "MCP server command"
+        required: false
+        default: "python"
+      mcp-args:
+        description: "MCP server arguments"
+        required: false
+        default: "src/server.py"
+
+jobs:
+  # Deterministic tools/list checks - no LLM keys required.
+  tools-list-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install server dependencies
+        run: pip install -r requirements.txt
+
+      - name: Export tools/list from local MCP server
+        run: python scripts/export_tools_list.py --output ci/tools-list.json
+
+      - name: Upload tools-list artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tools-list
+          path: ci/tools-list.json
+
+      - name: Validate tools/list (Plugin Federation)
+        uses: plugin-federation/actions/mcp-tools-list-validate@main
+        with:
+          tools-list-file: ci/tools-list.json
+          profile: plugin-federation
+          report-file: mcp-tools-list-report.json
+          github-annotations: "true"
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-tools-list-report
+          path: mcp-tools-list-report.json
+          if-no-files-found: ignore
+
+  # OIDC → record tools/list catalog + run LLM-as-judge (scores/assessments).
+  nexus-catalog:
+    name: Nexus catalog + judges
+    needs: tools-list-validate
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download tools-list artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tools-list
+          path: ci
+
+      - name: Exchange OIDC for Nexus access token
+        id: auth
+        uses: plugin-federation/actions/nexus-oidc-exchange@main
+        with:
+          nexus-url: ${{ vars.NEXUS_URL }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          oidc-audience: ${{ vars.NEXUS_OIDC_AUDIENCE }}
+
+      - name: Record catalog, embed tools, run judges
+        id: pipeline
+        uses: plugin-federation/actions/mcp-tool-judge-pipeline@main
+        with:
+          nexus-url: ${{ vars.NEXUS_URL }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          source-id: ${{ vars.MCP_SOURCE_ID }}
+          access-token: ${{ steps.auth.outputs.access-token }}
+          tools-list-file: ci/tools-list.json
+          source-version: ${{ github.sha }}
+          # Good-MCP dogfood: failing judge outcomes fail the job.
+          fail-on-judge-fail: "true"
+          embedding-model: text-embedding-3-small
+          embedding-provider: openai
+        env:
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Surface Console catalog evidence link
+        if: always() && steps.pipeline.outputs.catalog-console-url != ''
+        run: |
+          echo "::notice title=Console catalog evidence::${{ steps.pipeline.outputs.catalog-console-url }}"
+          {
+            echo "## Console catalog evidence"
+            echo
+            echo "[Open catalog evidence & judge opinions](${{ steps.pipeline.outputs.catalog-console-url }})"
+            echo
+            echo "- **Catalog digest:** \`${{ steps.pipeline.outputs.catalog-digest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # LLM-backed functional evals (Anthropic evaluations.xml format).
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install server dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run evaluations
+        uses: plugin-federation/actions/anthropic-mcp-eval@main
+        with:
+          evals-dir: ./evals
+          transport: ${{ inputs.transport || 'stdio' }}
+          mcp-command: ${{ inputs.mcp-command || 'python' }}
+          mcp-args: ${{ inputs.mcp-args || 'src/server.py' }}
+          provider-model: "xai/grok-build-0.1"
+          provider-api-key: ${{ secrets.XAI_API_KEY }}
+          provider-api-base: "https://api.x.ai/v1"
+          accuracy-threshold: "100"

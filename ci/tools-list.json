@@ -1,0 +1,555 @@
+{
+  "tools": [
+    {
+      "name": "list_units",
+      "description": "List conversion unit identifiers this server accepts.\n\nCall this before convert_* tools when you need the exact unit id strings\n(for example `kilometer` vs `mile`). Results are static and complete for\nthis server \u2014 there is no network lookup. Filter by dimension when the\nuser already knows they need length, mass, temperature, or volume only.\n",
+      "inputSchema": {
+        "$defs": {
+          "Dimension": {
+            "enum": [
+              "length",
+              "mass",
+              "temperature",
+              "volume"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "dimension": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Dimension"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional dimension filter. When omitted, returns every unit this server supports across length, mass, temperature, and volume. When set, returns only units for that dimension."
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "Dimension": {
+            "enum": [
+              "length",
+              "mass",
+              "temperature",
+              "volume"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "UnitInfo": {
+            "properties": {
+              "id": {
+                "description": "Stable unit identifier accepted by convert tools.",
+                "type": "string"
+              },
+              "dimension": {
+                "$ref": "#/$defs/Dimension",
+                "description": "Physical dimension this unit belongs to."
+              },
+              "symbol": {
+                "description": "Common short symbol for display (e.g. 'km', 'lb').",
+                "type": "string"
+              },
+              "description": {
+                "description": "Human-readable unit label.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "dimension",
+              "symbol",
+              "description"
+            ],
+            "title": "UnitInfo",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "dimensions": {
+            "description": "Dimensions available for conversion on this server.",
+            "items": {
+              "$ref": "#/$defs/Dimension"
+            },
+            "type": "array"
+          },
+          "units": {
+            "description": "Complete catalog of unit identifiers, grouped by dimension.",
+            "items": {
+              "$ref": "#/$defs/UnitInfo"
+            },
+            "type": "array"
+          },
+          "count": {
+            "description": "Total number of unit identifiers in the catalog.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dimensions",
+          "units",
+          "count"
+        ],
+        "title": "ListUnitsResult",
+        "type": "object"
+      }
+    },
+    {
+      "name": "convert_length",
+      "description": "Convert a length quantity between supported length units.\n\nUse when the user asks to convert distances or sizes (meters, miles, feet,\ninches, nautical miles, etc.). Both units must be length units; for mass,\ntemperature, or volume use the dedicated convert_* tool instead. Conversion\nfactors are fixed international standards stored in this server.\n",
+      "inputSchema": {
+        "$defs": {
+          "LengthUnit": {
+            "enum": [
+              "meter",
+              "kilometer",
+              "centimeter",
+              "millimeter",
+              "mile",
+              "yard",
+              "foot",
+              "inch",
+              "nautical_mile"
+            ],
+            "title": "LengthUnit",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "value": {
+            "description": "Numeric length magnitude to convert. May be negative when modeling directed distances; zero is allowed.",
+            "type": "number"
+          },
+          "from_unit": {
+            "$ref": "#/$defs/LengthUnit",
+            "description": "Source length unit id. Must be one of the length ids from list_units (e.g. meter, kilometer, mile, foot)."
+          },
+          "to_unit": {
+            "$ref": "#/$defs/LengthUnit",
+            "description": "Target length unit id. Must be a length unit from list_units. Use the same dimension as from_unit."
+          }
+        },
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "Dimension": {
+            "enum": [
+              "length",
+              "mass",
+              "temperature",
+              "volume"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "value": {
+            "description": "Converted numeric value in the target unit.",
+            "type": "number"
+          },
+          "from_unit": {
+            "description": "Source unit identifier that was converted from.",
+            "type": "string"
+          },
+          "to_unit": {
+            "description": "Target unit identifier that was converted to.",
+            "type": "string"
+          },
+          "dimension": {
+            "$ref": "#/$defs/Dimension",
+            "description": "Physical dimension of the conversion."
+          },
+          "formula_note": {
+            "description": "Short note describing how the conversion was computed.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit",
+          "dimension",
+          "formula_note"
+        ],
+        "title": "ConvertResult",
+        "type": "object"
+      }
+    },
+    {
+      "name": "convert_mass",
+      "description": "Convert a mass quantity between supported mass units.\n\nUse for weight/mass conversion requests such as kilograms to pounds or\ngrams to ounces. Do not use this for temperature or length. Values must be\nzero or positive. Factors follow international avoirdupois and SI definitions.\n",
+      "inputSchema": {
+        "$defs": {
+          "MassUnit": {
+            "enum": [
+              "kilogram",
+              "gram",
+              "milligram",
+              "pound",
+              "ounce",
+              "ton_metric",
+              "stone"
+            ],
+            "title": "MassUnit",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "value": {
+            "description": "Numeric mass magnitude to convert. Must be a finite number; negative values are rejected because mass is non-negative.",
+            "minimum": 0,
+            "type": "number"
+          },
+          "from_unit": {
+            "$ref": "#/$defs/MassUnit",
+            "description": "Source mass unit id from list_units (e.g. kilogram, pound, ounce)."
+          },
+          "to_unit": {
+            "$ref": "#/$defs/MassUnit",
+            "description": "Target mass unit id from list_units in the mass dimension."
+          }
+        },
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "Dimension": {
+            "enum": [
+              "length",
+              "mass",
+              "temperature",
+              "volume"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "value": {
+            "description": "Converted numeric value in the target unit.",
+            "type": "number"
+          },
+          "from_unit": {
+            "description": "Source unit identifier that was converted from.",
+            "type": "string"
+          },
+          "to_unit": {
+            "description": "Target unit identifier that was converted to.",
+            "type": "string"
+          },
+          "dimension": {
+            "$ref": "#/$defs/Dimension",
+            "description": "Physical dimension of the conversion."
+          },
+          "formula_note": {
+            "description": "Short note describing how the conversion was computed.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit",
+          "dimension",
+          "formula_note"
+        ],
+        "title": "ConvertResult",
+        "type": "object"
+      }
+    },
+    {
+      "name": "convert_temperature",
+      "description": "Convert a temperature between Celsius, Fahrenheit, and Kelvin.\n\nUse when the user asks for temperature scale conversion (for example 32\u00b0F\nto Celsius, or body temperature to Kelvin). This is not a weather lookup \u2014\nit only transforms the provided number. Invalid absolute temperatures below\n0 K are rejected with a clear error.\n",
+      "inputSchema": {
+        "$defs": {
+          "TemperatureUnit": {
+            "enum": [
+              "celsius",
+              "fahrenheit",
+              "kelvin"
+            ],
+            "title": "TemperatureUnit",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "value": {
+            "description": "Temperature magnitude in from_unit. Absolute zero and below in Kelvin are rejected; Celsius/Fahrenheit values that map below 0 K are rejected.",
+            "type": "number"
+          },
+          "from_unit": {
+            "$ref": "#/$defs/TemperatureUnit",
+            "description": "Source temperature scale: celsius, fahrenheit, or kelvin."
+          },
+          "to_unit": {
+            "$ref": "#/$defs/TemperatureUnit",
+            "description": "Target temperature scale: celsius, fahrenheit, or kelvin."
+          }
+        },
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "Dimension": {
+            "enum": [
+              "length",
+              "mass",
+              "temperature",
+              "volume"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "value": {
+            "description": "Converted numeric value in the target unit.",
+            "type": "number"
+          },
+          "from_unit": {
+            "description": "Source unit identifier that was converted from.",
+            "type": "string"
+          },
+          "to_unit": {
+            "description": "Target unit identifier that was converted to.",
+            "type": "string"
+          },
+          "dimension": {
+            "$ref": "#/$defs/Dimension",
+            "description": "Physical dimension of the conversion."
+          },
+          "formula_note": {
+            "description": "Short note describing how the conversion was computed.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit",
+          "dimension",
+          "formula_note"
+        ],
+        "title": "ConvertResult",
+        "type": "object"
+      }
+    },
+    {
+      "name": "convert_volume",
+      "description": "Convert a volume quantity between supported volume units.\n\nUse for liquid measure conversions such as liters to US gallons or cups to\nmilliliters. Imperial and US customary units are distinct \u2014 pick the exact\nunit id from list_units. Mass and length conversions belong on convert_mass\nand convert_length respectively.\n",
+      "inputSchema": {
+        "$defs": {
+          "VolumeUnit": {
+            "enum": [
+              "liter",
+              "milliliter",
+              "cubic_meter",
+              "us_gallon",
+              "us_quart",
+              "us_cup",
+              "us_fluid_ounce",
+              "imperial_gallon"
+            ],
+            "title": "VolumeUnit",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "value": {
+            "description": "Numeric volume magnitude to convert. Must be zero or positive; negative volumes are rejected.",
+            "minimum": 0,
+            "type": "number"
+          },
+          "from_unit": {
+            "$ref": "#/$defs/VolumeUnit",
+            "description": "Source volume unit id from list_units (e.g. liter, us_gallon, milliliter)."
+          },
+          "to_unit": {
+            "$ref": "#/$defs/VolumeUnit",
+            "description": "Target volume unit id from list_units in the volume dimension."
+          }
+        },
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "Dimension": {
+            "enum": [
+              "length",
+              "mass",
+              "temperature",
+              "volume"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "value": {
+            "description": "Converted numeric value in the target unit.",
+            "type": "number"
+          },
+          "from_unit": {
+            "description": "Source unit identifier that was converted from.",
+            "type": "string"
+          },
+          "to_unit": {
+            "description": "Target unit identifier that was converted to.",
+            "type": "string"
+          },
+          "dimension": {
+            "$ref": "#/$defs/Dimension",
+            "description": "Physical dimension of the conversion."
+          },
+          "formula_note": {
+            "description": "Short note describing how the conversion was computed.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit",
+          "dimension",
+          "formula_note"
+        ],
+        "title": "ConvertResult",
+        "type": "object"
+      }
+    },
+    {
+      "name": "compare_quantities",
+      "description": "Compare two quantities that may use different units of the same dimension.\n\nUse when the user asks which of two measurements is larger (for example\n1 mile vs 2 kilometers) or wants the numeric difference in a chosen unit.\nBoth sides must share length, mass, temperature, or volume; mixed dimensions\nare rejected. Temperature comparisons use Kelvin as the absolute bridge.\n",
+      "inputSchema": {
+        "properties": {
+          "left_value": {
+            "description": "Numeric magnitude of the left-hand quantity.",
+            "type": "number"
+          },
+          "left_unit": {
+            "description": "Unit id for the left-hand quantity. Must be a unit from list_units and share the same dimension as right_unit.",
+            "maxLength": 40,
+            "minLength": 1,
+            "type": "string"
+          },
+          "right_value": {
+            "description": "Numeric magnitude of the right-hand quantity.",
+            "type": "number"
+          },
+          "right_unit": {
+            "description": "Unit id for the right-hand quantity. Must match left_unit's dimension.",
+            "maxLength": 40,
+            "minLength": 1,
+            "type": "string"
+          },
+          "result_unit": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional unit id for the comparison output. Defaults to left_unit. Must belong to the same dimension as both inputs."
+          }
+        },
+        "required": [
+          "left_value",
+          "left_unit",
+          "right_value",
+          "right_unit"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "$defs": {
+          "Dimension": {
+            "enum": [
+              "length",
+              "mass",
+              "temperature",
+              "volume"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          }
+        },
+        "properties": {
+          "left_value": {
+            "description": "Left-hand quantity after normalization.",
+            "type": "number"
+          },
+          "right_value": {
+            "description": "Right-hand quantity after normalization.",
+            "type": "number"
+          },
+          "unit": {
+            "description": "Unit used for the comparison result values.",
+            "type": "string"
+          },
+          "dimension": {
+            "$ref": "#/$defs/Dimension",
+            "description": "Physical dimension of both quantities."
+          },
+          "difference": {
+            "description": "left_value - right_value in the comparison unit.",
+            "type": "number"
+          },
+          "relation": {
+            "description": "Whether the left quantity is greater, less, or equal to the right.",
+            "enum": [
+              "greater",
+              "less",
+              "equal"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "left_value",
+          "right_value",
+          "unit",
+          "dimension",
+          "difference",
+          "relation"
+        ],
+        "title": "CompareResult",
+        "type": "object"
+      }
+    }
+  ]
+}

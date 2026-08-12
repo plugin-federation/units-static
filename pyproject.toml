@@ -1,0 +1,17 @@
+[project]
+name = "units-static"
+version = "0.1.0"
+description = "High-quality static unit conversion MCP server (good-MCP dogfood)"
+requires-python = ">=3.11"
+dependencies = ["mcp>=1.0.0,<2"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
