@@ -55,7 +55,7 @@ Shared Actions from **`plugin-federation/actions`**:
 | Job | Purpose |
 |-----|---------|
 | `tools-list-validate` | Export `tools/list` + structural validation |
-| `nexus-catalog` | OIDC → catalog + embeddings + LLM-as-judge (**fail-on-judge-fail**) |
+| `nexus-catalog` | OIDC → catalog, schema verify, selection-surface embeddings, LLM-as-judge (**fail-on-judge-fail**) |
 | `evals` | Functional evals (`evals/evaluations.xml`, **100%** threshold) |
 
 ## Nexus pipeline setup
@@ -68,6 +68,12 @@ Shared Actions from **`plugin-federation/actions`**:
 | `MCP_SOURCE_ID` | **New** stable tool source UUID for this server |
 | `XAI_API_KEY` | Judge model + functional evals |
 | `OPENAI_API_KEY` | Embeddings (`text-embedding-3-small`) |
+
+Embeddings use name + description + input schema (`tool-embedding-report/v1`).
+Embed failures do not fail judges. Similarity reports are derived by Nexus from
+a registered semantic-analysis profile whose `profileVersion` and `model` match
+`text-embedding-3-small` (1536 dimensions unless shortened). CI cannot create
+that profile.
 
 Also register this repository in the tenant OIDC trust policy (same pattern as
 meteo-static) and create a dedicated tool source for `units-static`.
