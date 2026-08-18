@@ -96,8 +96,13 @@ jobs:
           source-version: ${{ github.sha }}
           # Good-MCP dogfood: failing judge outcomes fail the job.
           fail-on-judge-fail: "true"
+          # Selection-surface embeddings (name + description + input schema).
+          # Posted as tool-embedding-report/v1. Embed failures do not fail judges.
+          # Similarity reports are derived by Nexus, not this job.
           embedding-model: text-embedding-3-small
           embedding-provider: openai
+          schema-verify: "true"
+          fail-on-unapproved-schema: "false"
         env:
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -113,6 +118,7 @@ jobs:
             echo "[Open catalog evidence & judge opinions](${{ steps.pipeline.outputs.catalog-console-url }})"
             echo
             echo "- **Catalog digest:** \`${{ steps.pipeline.outputs.catalog-digest }}\`"
+            echo "- **Schema verification:** \`${{ steps.pipeline.outputs.verification-id }}\` (${{ steps.pipeline.outputs.verification-status }})"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # LLM-backed functional evals (Anthropic evaluations.xml format).

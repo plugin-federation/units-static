@@ -30,3 +30,11 @@ python src/server.py
 - Keep enums closed; never invent unit strings outside `list_units`.
 - Keep output models object-shaped for MCP `outputSchema`.
 - Do not add network-backed tools; this server is deterministic.
+
+## GitHub Actions
+
+- `mcp-tools-list-validate` — structural tools/list checks
+- `nexus-oidc-exchange` + `mcp-tool-judge-pipeline` — catalog, schema verify,
+  selection-surface embeddings (`text-embedding-3-small`), judges. Nexus owns
+  similarity reports; embed errors do not fail judges.
+- `anthropic-mcp-eval` — `evals/evaluations.xml` at 100% accuracy threshold
