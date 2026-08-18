@@ -91,7 +91,7 @@ jobs:
           nexus-url: ${{ vars.NEXUS_URL }}
           tenant-id: ${{ vars.TENANT_ID }}
           source-id: ${{ vars.MCP_SOURCE_ID }}
-          access-token: ${{ steps.auth.outputs.access-token }}
+          access-token: ${{ steps.auth.outputs['access-token'] }}
           tools-list-file: ci/tools-list.json
           source-version: ${{ github.sha }}
           # Good-MCP dogfood: failing judge outcomes fail the job.
@@ -109,16 +109,16 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Surface Console catalog evidence link
-        if: always() && steps.pipeline.outputs.catalog-console-url != ''
+        if: ${{ always() && steps.pipeline.outputs['catalog-console-url'] != '' }}
         run: |
-          echo "::notice title=Console catalog evidence::${{ steps.pipeline.outputs.catalog-console-url }}"
+          echo "::notice title=Console catalog evidence::${{ steps.pipeline.outputs['catalog-console-url'] }}"
           {
             echo "## Console catalog evidence"
             echo
-            echo "[Open catalog evidence & judge opinions](${{ steps.pipeline.outputs.catalog-console-url }})"
+            echo "[Open catalog evidence & judge opinions](${{ steps.pipeline.outputs['catalog-console-url'] }})"
             echo
-            echo "- **Catalog digest:** \`${{ steps.pipeline.outputs.catalog-digest }}\`"
-            echo "- **Schema verification:** \`${{ steps.pipeline.outputs.verification-id }}\` (${{ steps.pipeline.outputs.verification-status }})"
+            echo "- **Catalog digest:** \`${{ steps.pipeline.outputs['catalog-digest'] }}\`"
+            echo "- **Schema verification:** \`${{ steps.pipeline.outputs['verification-id'] }}\` (${{ steps.pipeline.outputs['verification-status'] }})"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # LLM-backed functional evals (Anthropic evaluations.xml format).
